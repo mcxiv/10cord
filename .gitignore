@@ -1,0 +1,6 @@
+# Folders
+.venv
+
+# Files
+.envrc
+token.json
