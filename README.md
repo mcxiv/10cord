@@ -1,6 +1,8 @@
 # 10cord
 **10cord** is a **Discord alternative client** as a **Command Line Interface (CLI) application**. Yes, it is **against Discord's TOS**, but it is a fun project to work on. It is written in Python, and only uses HTTP requests to communicate with Discord's API.
 
+By using **10cord**, you can safely talk with your friends on Discord in your company's open space, without having to worry about your boss seeing that you're not working. You will just look like a hacker, and that's cool.
+
 ## Installation
 ```bash
 git clone https://github.com/MCXIV/10cord.git

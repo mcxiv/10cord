@@ -97,7 +97,7 @@ class MyClient():
             date = message['timestamp'].replace('T', ' - ').split('.')[0]
             username = message['author']['username']
             content = message['content']
-            if '<@' in content:
+            if '<@' in content and '<@&' not in content:
                 user_id = content.split('<@')[1].split('>')[0]
                 username = self.get_username_from_id(user_id)
                 content = content.replace(f'<@{user_id}>', f'[bold]@{username}[/bold]')
@@ -147,7 +147,7 @@ class MyClient():
         )
 
         if response.status_code != 200:
-            raise Exception(f'Get username failed : {response.status_code} {response.text}')
+            return user_id
 
         return response.json()['username']
 
