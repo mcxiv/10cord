@@ -178,7 +178,7 @@ class MyClient():
         :return: the username of the user with the given user_id if the response status code is 200.
         Otherwise, it returns the user_id itself.
         """
-
+        
         response = requests.get(
             f'{self.url}/users/{user_id}',
             headers=self.headers,
@@ -186,6 +186,9 @@ class MyClient():
         )
 
         if response.status_code != 200:
+            if 'rate limited' in response.text:
+                time.sleep(1)
+                return self.get_username_from_id(user_id)
             return user_id
 
         return response.json()['username']
