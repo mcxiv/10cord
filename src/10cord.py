@@ -31,6 +31,11 @@ def parse_args():
         'channel',
         help='Channel ID to get messages from',
     )
+    parser.add_argument(
+        '-a', '--attach',
+        help='If true, displays attachments (Requires chafa)',
+        default=False
+    )
 
     return parser.parse_args()
 
@@ -60,6 +65,7 @@ class MyClient():
         }
 
         self.ids = {}
+        self.attachments = {}
 
     def login(self):
         """
@@ -147,19 +153,21 @@ class MyClient():
                 ) if content == '' else (
                     f'\n[bold][red]{message["attachments"][0]["url"]}[/red][/bold]'
                 )
+                if message['attachments'][0]['url'] not in self.attachments:
+                    file = requests.get(
+                        message['attachments'][0]['url'], headers=self.headers
+                    )
 
-                file = requests.get(
-                    message['attachments'][0]['url'], headers=self.headers
-                )
-
-                if file.status_code == 200:
-                    with open(f'./tmp/{message["attachments"][0]["filename"]}', 'wb') as f:
-                        f.write(file.content)
+                    if file.status_code == 200 and self.args.attach:
+                        with open(f'./tmp/{message["attachments"][0]["filename"]}', 'wb') as f:
+                            f.write(file.content)
+                        self.attachments[message['attachments']
+                                         [0]['url']] = True
 
             rprint(
                 f'[bold][blue][{date}][/blue] [magenta]{username}[/magenta][/bold] : {content}')
 
-            if message['attachments'] != []:
+            if message['attachments'] != [] and self.args.attach:
                 if os.name == 'posix' and 'Chafa version' in sp.getoutput('chafa --version'):
                     os.system(
                         f'chafa ./tmp/{message["attachments"][0]["filename"]} --size=50x50 --animate=off'
@@ -233,6 +241,84 @@ class MyClient():
 
         return response.json()['username']
 
+    def put_attachment(self, path, size, content):
+        """ 
+        This function sends a file to a specified channel using the Discord API.
+
+        :param path: The `path` parameter is the path of the file you want to send.
+        :param size: The `size` parameter is the size of the file you want to send.
+        :param content: The `content` parameter is the message content that you want to send.
+        """
+
+        if not os.path.isfile(path):
+            rprint(f'[bold][red]Is {path} a file?[/red][/bold]')
+            return
+
+        json_data = {
+            'files': [
+                {
+                    'filename': path,
+                    'file_size': size,
+                    'id': '8',
+                    'is_clip': False,
+                },
+            ],
+        }
+
+        response = requests.post(
+            f'{self.url}/channels/{self.args.channel}/attachments',
+            headers=self.headers,
+            json=json_data,
+        )
+
+        if response.status_code != 200:
+            raise Exception(
+                f'Put attachment failed : {response.status_code} {response.text}')
+
+        upload_link = response.json()['attachments'][0]['upload_url']
+        upload_filename = response.json()['attachments'][0]['upload_filename']
+
+        params = {
+            'upload_id': upload_link.split('upload_id=')[1]
+        }
+
+        with open(path, 'rb') as f:
+            data = f.read()
+
+        response = requests.put(
+            f'https://discord-attachments-uploads-prd.storage.googleapis.com/{upload_filename}',
+            params=params,
+            headers=self.headers,
+            data=data,
+        )
+
+        if response.status_code != 200:
+            raise Exception(
+                f'Put attachment failed : {response.status_code} {response.text}')
+
+        json_data = {
+            'content': content,
+            'attachments': [
+                {
+                    'id': '0',
+                    'filename': path,
+                    'uploaded_filename': upload_filename,
+                },
+            ],
+        }
+
+        response = requests.post(
+            f'{self.url}/channels/{self.args.channel}/messages',
+            headers=self.headers,
+            json=json_data,
+        )
+
+        if response.status_code != 200:
+            raise Exception(
+                f'Put attachment failed : {response.status_code} {response.text}')
+
+        self.refresh_screen()
+
     def refresh_screen(self):
         """ Refresh the screen and print the last messages """
 
@@ -242,6 +328,30 @@ class MyClient():
         diff_messages = self.diff_messages(new_messages, self.messages)
         self.print_messages(diff_messages)
         self.messages = new_messages
+
+    def internal_command(self, command):
+        """ 
+        The `internal_command` function is used to execute internal commands.
+
+        :param command: The `command` parameter is the command you want to execute.
+        """
+
+        if command == ':q':
+            self.kill_thread = True
+            self.main_loop_thread.join()
+            sys.exit()
+        elif ':attach ' in command:
+            attachment = command.split(' ')[1]
+            if len(command.split(' ')) == 3:
+                content = command.split(' ')[2]
+            else:
+                content = ''
+            if os.path.exists(attachment):
+                self.put_attachment(
+                    attachment, os.path.getsize(attachment), content
+                )
+            else:
+                rprint('[bold][red]File not found[/red][/bold]')
 
     def main_loop(self):
         """
@@ -270,18 +380,21 @@ class MyClient():
         message.
         """
 
-        main_loop_thread = threading.Thread(target=self.main_loop)
-        main_loop_thread.start()
+        self.main_loop_thread = threading.Thread(target=self.main_loop)
+        self.main_loop_thread.start()
 
         while 1:
             try:
                 time.sleep(1)
                 content = input()
-                if content:
+                if content != '' and ':q' not in content and ':attach' not in content:
                     message_sent = self.send_message(content)
+                else:
+                    self.internal_command(content)
+
             except KeyboardInterrupt:
                 self.kill_thread = True
-                main_loop_thread.join()
+                self.main_loop_thread.join()
                 sys.exit()
 
 
