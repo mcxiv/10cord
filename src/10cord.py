@@ -7,6 +7,7 @@ import time
 import argparse
 import threading
 import sys
+import subprocess as sp
 
 
 def parse_args():
@@ -37,9 +38,13 @@ def parse_args():
 class MyClient():
     def __init__(self) -> None:
         self.args = parse_args()
-        self.url = "https://discord.com/api/v9"
-        if os.path.exists('token.json'):
-            with open('token.json', 'r', encoding='utf-8') as f:
+        self.url = 'https://discord.com/api/v9'
+
+        if not os.path.exists('tmp'):
+            os.mkdir('tmp')
+
+        if os.path.exists('tmp/token.json'):
+            with open('tmp/token.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 self.user_id = data['user_id']
                 self.token = data['token']
@@ -63,11 +68,11 @@ class MyClient():
         """
 
         data = {
-            "login": self.args.email,
-            "password": self.args.password,
-            "undelete": False,
-            "login_source": None,
-            "gift_code_sku_id": None
+            'login': self.args.email,
+            'password': self.args.password,
+            'undelete': False,
+            'login_source': None,
+            'gift_code_sku_id': None
         }
 
         response = requests.post(
@@ -84,7 +89,7 @@ class MyClient():
         self.token = response.json()['token']
         self.timestamp = str(time.time())
 
-        with open('token.json', 'w', encoding='utf-8') as f:
+        with open('tmp/token.json', 'w', encoding='utf-8') as f:
             json.dump({'user_id': self.user_id, 'token': self.token,
                       'timestamp': self.timestamp}, f, indent=4)
 
@@ -127,6 +132,8 @@ class MyClient():
             username = message['author']['username']
             content = message['content']
             if '<@' in content and '<@&' not in content:
+                # TODO: rework this part to avoid request as mentions is located
+                # in the message requests
                 user_id = content.split('<@')[1].split('>')[0]
                 if user_id not in self.ids:
                     self.ids[user_id] = self.get_username_from_id(user_id)
@@ -134,8 +141,29 @@ class MyClient():
                 content = content.replace(
                     f'<@{user_id}>', f'[bold]@{username_in_content}[/bold]')
 
+            if message['attachments'] != []:
+                content += (
+                    f'[bold][red]{message["attachments"][0]["url"]}[/red][/bold]'
+                ) if content == '' else (
+                    f'\n[bold][red]{message["attachments"][0]["url"]}[/red][/bold]'
+                )
+
+                file = requests.get(
+                    message['attachments'][0]['url'], headers=self.headers
+                )
+
+                if file.status_code == 200:
+                    with open(f'./tmp/{message["attachments"][0]["filename"]}', 'wb') as f:
+                        f.write(file.content)
+
             rprint(
                 f'[bold][blue][{date}][/blue] [magenta]{username}[/magenta][/bold] : {content}')
+
+            if message['attachments'] != []:
+                if os.name == 'posix' and 'Chafa version' in sp.getoutput('chafa --version'):
+                    os.system(
+                        f'chafa ./tmp/{message["attachments"][0]["filename"]} --size=50x50 --animate=off'
+                    )
 
     def diff_messages(self, messages1, messages2):
         """

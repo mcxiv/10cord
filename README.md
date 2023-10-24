@@ -10,6 +10,17 @@ cd 10cord
 python3 -m pip install -r requirements.txt
 ```
 
+### Optional
+If you want to display images and videos in your terminal, you can install [chafa](https://github.com/hpjansson/chafa)
+
+```bash
+# Arch Linux
+yay -S chafa
+
+# Debian
+sudo apt install chafa
+```
+
 ## Usage
 ```bash
 python3 src/10cord.py -h                                 
@@ -34,3 +45,4 @@ python3 src/10cord.py $EMAIL $PASSWORD $CHANNEL
 - login
 - get messages from a specific channel
 - send messages to a specific channel (just type your message and press enter)
+- attachments (images and videos) are displayed as links. Ctrl + click on the link to open it in your browser. If chafa is installed, the attachment will be printed into your terminal. (Posix only)
