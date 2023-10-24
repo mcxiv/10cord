@@ -6,6 +6,7 @@ import json
 import time
 import argparse
 import threading
+import sys
 
 
 def parse_args():
@@ -53,6 +54,8 @@ class MyClient():
             'Authorization': self.token,
         }
 
+        self.ids = {}
+
     def login(self):
         """
         The `login` function sends a POST request to a specified URL with login credentials, and if
@@ -74,7 +77,8 @@ class MyClient():
         )
 
         if response.status_code != 200:
-            raise Exception(f'Login failed : {response.status_code} {response.text}')
+            raise Exception(
+                f'Login failed : {response.status_code} {response.text}')
 
         self.user_id = response.json()['user_id']
         self.token = response.json()['token']
@@ -92,7 +96,7 @@ class MyClient():
         """
 
         params = {
-            'limit': '100',
+            'limit': '50',
         }
 
         response = requests.get(
@@ -103,7 +107,8 @@ class MyClient():
         )
 
         if response.status_code != 200:
-            raise Exception(f'Get messages failed : {response.status_code} {response.text}')
+            raise Exception(
+                f'Get messages failed : {response.status_code} {response.text}')
 
         messages = response.json()
         messages.reverse()
@@ -123,10 +128,14 @@ class MyClient():
             content = message['content']
             if '<@' in content and '<@&' not in content:
                 user_id = content.split('<@')[1].split('>')[0]
-                username = self.get_username_from_id(user_id)
-                content = content.replace(f'<@{user_id}>', f'[bold]@{username}[/bold]')
+                if user_id not in self.ids:
+                    self.ids[user_id] = self.get_username_from_id(user_id)
+                username_in_content = self.ids[user_id]
+                content = content.replace(
+                    f'<@{user_id}>', f'[bold]@{username_in_content}[/bold]')
 
-            rprint(f'[bold][blue][{date}][/blue] [magenta]{username}[/magenta][/bold] : {content}')
+            rprint(
+                f'[bold][blue][{date}][/blue] [magenta]{username}[/magenta][/bold] : {content}')
 
     def diff_messages(self, messages1, messages2):
         """
@@ -165,7 +174,10 @@ class MyClient():
         )
 
         if response.status_code != 200:
-            raise Exception(f'Send message failed : {response.status_code} {response.text}')
+            raise Exception(
+                f'Send message failed : {response.status_code} {response.text}')
+
+        self.refresh_screen()
 
         return response.json()
 
@@ -178,7 +190,7 @@ class MyClient():
         :return: the username of the user with the given user_id if the response status code is 200.
         Otherwise, it returns the user_id itself.
         """
-        
+
         response = requests.get(
             f'{self.url}/users/{user_id}',
             headers=self.headers,
@@ -193,21 +205,36 @@ class MyClient():
 
         return response.json()['username']
 
+    def refresh_screen(self):
+        """ Refresh the screen and print the last messages """
+
+        os.system('clear') if os.name == 'posix' else os.system('cls')
+        self.messages = []
+        new_messages = self.get_messages()
+        diff_messages = self.diff_messages(new_messages, self.messages)
+        self.print_messages(diff_messages)
+        self.messages = new_messages
+
     def main_loop(self):
         """
         The main_loop function retrieves and prints messages, then continuously checks for new
         messages and prints any differences.
         """
 
-        messages = self.get_messages()
-        self.print_messages(messages)
+        self.messages = self.get_messages()
+        self.print_messages(self.messages)
+        self.kill_thread = False
 
-        while 1:
-            time.sleep(3)
-            new_messages = self.get_messages()
-            diff_messages = self.diff_messages(new_messages, messages)
-            self.print_messages(diff_messages)
-            messages = new_messages
+        started = time.time()
+        while not self.kill_thread:
+            if time.time() - started >= 3:
+                new_messages = self.get_messages()
+                diff_messages = self.diff_messages(new_messages, self.messages)
+                self.print_messages(diff_messages)
+                self.messages = new_messages
+                started = time.time()
+            else:
+                time.sleep(0.1)
 
     def main(self):
         """
@@ -219,10 +246,15 @@ class MyClient():
         main_loop_thread.start()
 
         while 1:
-            time.sleep(1)
-            content = input()
-            if content:
-                message_sent = self.send_message(content)
+            try:
+                time.sleep(1)
+                content = input()
+                if content:
+                    message_sent = self.send_message(content)
+            except KeyboardInterrupt:
+                self.kill_thread = True
+                main_loop_thread.join()
+                sys.exit()
 
 
 if __name__ == "__main__":
