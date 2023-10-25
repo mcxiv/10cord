@@ -13,11 +13,12 @@ python3 -m pip install -r requirements.txt
 ### Optional
 If you want to display images and videos in your terminal, you can install [chafa](https://github.com/hpjansson/chafa)
 
-**Be careful, 10cord automatically downloads any attachments!!!**
+**Be careful, 10cord automatically downloads any attachments if you enabled them.**
 
 ```bash
 # Arch Linux
 yay -S chafa
+sudo pacman -S chafa
 
 # Debian
 sudo apt install chafa
@@ -44,10 +45,12 @@ python3 src/10cord.py $EMAIL $PASSWORD $CHANNEL
 
 ### Internal commands
 - `:q` to quit the application
-- `:attach <path> <content>` to send an attachment. `<path>` is the path to the file, and `<content>` is the message to send with the attachment. If `<content>` is empty, the attachment will be sent without any message.
+- `:attach:<path>:<content>` to send an attachment. `<path>` is the path to the file, and `<content>` is the message to send with the attachment. If `<content>` is empty, the attachment will be sent without any message.
+- `:cr` to refresh the screen
+- `:help` to display the help message
 
-## Output example
-![output example](docs/example.png "Output example")
+## Demo
+![demo example](docs/demo.gif "Demo example")
 
 ## Features
 - login

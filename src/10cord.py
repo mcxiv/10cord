@@ -14,6 +14,7 @@ def parse_args():
     """
     The `parse_args` function is used to parse command line arguments for the user's email,
     password, and channel ID.
+
     :return: The function `parse_args()` returns the parsed command-line arguments as an
     `argparse.Namespace` object.
     """
@@ -65,7 +66,7 @@ class MyClient():
         }
 
         self.ids = {}
-        self.attachments = {}
+        self.attachments = []
 
     def login(self):
         """
@@ -103,6 +104,7 @@ class MyClient():
         """
         The function `get_messages` retrieves the latest 100 messages from a specified channel using the
         Discord server.
+
         :return: a list of messages.
         """
 
@@ -153,16 +155,18 @@ class MyClient():
                 ) if content == '' else (
                     f'\n[bold][red]{message["attachments"][0]["url"]}[/red][/bold]'
                 )
-                if message['attachments'][0]['url'] not in self.attachments:
-                    file = requests.get(
-                        message['attachments'][0]['url'], headers=self.headers
-                    )
 
-                    if file.status_code == 200 and self.args.attach:
-                        with open(f'./tmp/{message["attachments"][0]["filename"]}', 'wb') as f:
-                            f.write(file.content)
-                        self.attachments[message['attachments']
-                                         [0]['url']] = True
+                if message['attachments'][0]['url'] not in self.attachments:
+                    if self.args.attach:
+                        file = requests.get(
+                            message['attachments'][0]['url'], headers=self.headers
+                        )
+                        if file.status_code == 200:
+                            with open(f'./tmp/{message["attachments"][0]["filename"]}', 'wb') as f:
+                                f.write(file.content)
+                            self.attachments.append(
+                                message['attachments'][0]['url']
+                            )
 
             rprint(
                 f'[bold][blue][{date}][/blue] [magenta]{username}[/magenta][/bold] : {content}')
@@ -180,6 +184,7 @@ class MyClient():
 
         :param messages1: A list of messages
         :param messages2: An other list of messages
+
         :return: a list of messages that are present in `messages1` but not in `messages2`.
         """
 
@@ -190,16 +195,18 @@ class MyClient():
 
         return new_messages
 
-    def send_message(self, content):
+    def send_message(self, content, attachments=[]):
         """
         The `send_message` function sends a message to a specified channel using the Discord API.
 
-        :param content: The `content` parameter is the message content that you want to send.
+        :param content: Message content that you want to send.
+
         :return: the JSON response from the API call.
         """
 
         data = {
-            'content': content
+            'content': content,
+            'attachments': attachments
         }
 
         response = requests.post(
@@ -222,7 +229,8 @@ class MyClient():
         The function `get_username_from_id` retrieves the username associated with a given user ID
         from the Discord API.
 
-        :param user_id: The `user_id` parameter is the unique identifier of a user.
+        :param user_id: Unique identifier of a user.
+
         :return: the username of the user with the given user_id if the response status code is 200.
         Otherwise, it returns the user_id itself.
         """
@@ -241,26 +249,21 @@ class MyClient():
 
         return response.json()['username']
 
-    def put_attachment(self, path, size, content):
-        """ 
-        This function sends a file to a specified channel using the Discord API.
+    def request_upload_attachment(self, path, size):
+        """
+        This function requests an upload link for a file to a specified channel using the Discord API.
 
-        :param path: The `path` parameter is the path of the file you want to send.
-        :param size: The `size` parameter is the size of the file you want to send.
-        :param content: The `content` parameter is the message content that you want to send.
+        :param path: Path of the file you want to send.
+        :param size: Size of the file you want to send.
+
+        :return: the JSON response from the API call.
         """
 
-        if not os.path.isfile(path):
-            rprint(f'[bold][red]Is {path} a file?[/red][/bold]')
-            return
-
-        json_data = {
+        data = {
             'files': [
                 {
                     'filename': path,
                     'file_size': size,
-                    'id': '8',
-                    'is_clip': False,
                 },
             ],
         }
@@ -268,25 +271,34 @@ class MyClient():
         response = requests.post(
             f'{self.url}/channels/{self.args.channel}/attachments',
             headers=self.headers,
-            json=json_data,
+            json=data,
         )
 
         if response.status_code != 200:
             raise Exception(
                 f'Put attachment failed : {response.status_code} {response.text}')
 
-        upload_link = response.json()['attachments'][0]['upload_url']
-        upload_filename = response.json()['attachments'][0]['upload_filename']
+        return response.json()
 
+    def upload_attachment(self, path, link, filename):
+        """
+        This function uploads a file to a specified channel using the Discord API.
+
+        :param path: Path of the file you want to send.
+        :param link: Upload link of the file you want to send.
+        :param filename: Name of the file in Discord storage.
+
+        :return: 1 if the upload was successful.
+        """
         params = {
-            'upload_id': upload_link.split('upload_id=')[1]
+            'upload_id': link.split('upload_id=')[1]
         }
 
         with open(path, 'rb') as f:
             data = f.read()
 
         response = requests.put(
-            f'https://discord-attachments-uploads-prd.storage.googleapis.com/{upload_filename}',
+            f'https://discord-attachments-uploads-prd.storage.googleapis.com/{filename}',
             params=params,
             headers=self.headers,
             data=data,
@@ -296,28 +308,37 @@ class MyClient():
             raise Exception(
                 f'Put attachment failed : {response.status_code} {response.text}')
 
-        json_data = {
-            'content': content,
-            'attachments': [
-                {
-                    'id': '0',
-                    'filename': path,
-                    'uploaded_filename': upload_filename,
-                },
-            ],
-        }
+        return 1
 
-        response = requests.post(
-            f'{self.url}/channels/{self.args.channel}/messages',
-            headers=self.headers,
-            json=json_data,
-        )
+    def put_attachment(self, path, size, content):
+        """
+        This function sends a file to a specified channel using the Discord API.
 
-        if response.status_code != 200:
-            raise Exception(
-                f'Put attachment failed : {response.status_code} {response.text}')
+        :param path: The `path` parameter is the path of the file you want to send.
+        :param size: The `size` parameter is the size of the file you want to send.
+        :param content: The `content` parameter is the message content that you want to send.
 
-        self.refresh_screen()
+        :return: Nothing if the file can't be found.
+        """
+
+        if not os.path.isfile(path):
+            rprint(f'[bold][red]Is {path} a file?[/red][/bold]')
+            return
+
+        request_attachment = self.request_upload_attachment(path, size)
+        upload_link = request_attachment['attachments'][0]['upload_url']
+        upload_filename = request_attachment['attachments'][0]['upload_filename']
+        self.upload_attachment(path, upload_link, upload_filename)
+
+        attachment_data = [
+            {
+                'id': '0',
+                'filename': path,
+                'uploaded_filename': upload_filename,
+            },
+        ]
+
+        self.send_message(content, attachment_data)
 
     def refresh_screen(self):
         """ Refresh the screen and print the last messages """
@@ -330,20 +351,39 @@ class MyClient():
         self.messages = new_messages
 
     def internal_command(self, command):
-        """ 
+        """
         The `internal_command` function is used to execute internal commands.
 
         :param command: The `command` parameter is the command you want to execute.
         """
 
-        if command == ':q':
+        if command == ':help':
+            rprint()
+            rprint('[#7289DA]' +
+                   '==============================\n' +
+                   '|[#E01E5A]       Commands list:       [/#E01E5A]|\n' +
+                   '==============================\n'
+                   '| :help - Show this help     |\n' +
+                   '| :q - Exit 10cord           |\n' +
+                   '| :attach - Attach a file    |\n' +
+                   '| :cr - Clear and Refresh    |\n' +
+                   '=============================='
+                   '[/#7289DA]'
+                   )
+            rprint()
+
+        elif command == ':q':
             self.kill_thread = True
             self.main_loop_thread.join()
             sys.exit()
-        elif ':attach ' in command:
-            attachment = command.split(' ')[1]
-            if len(command.split(' ')) == 3:
-                content = command.split(' ')[2]
+
+        elif command == ':cr':
+            self.refresh_screen()
+
+        elif ':attach:' in command:
+            attachment = command.split(':')[2]
+            if len(command.split(':')) == 4:
+                content = command.split(':')[3]
             else:
                 content = ''
             if os.path.exists(attachment):
@@ -352,6 +392,31 @@ class MyClient():
                 )
             else:
                 rprint('[bold][red]File not found[/red][/bold]')
+
+    def print_welcome(self):
+        """ Print the welcome message and the commands list """
+
+        rprint('\n[#7289DA]' +
+               '=================================================================================\n' +
+               '|[#E01E5A]     ▄▄▄▄      ▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   [/#E01E5A]|\n' +
+               '|[#E01E5A]   ▄█░░░░▌    ▐░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░▌  [/#E01E5A]|\n' +
+               '|[#E01E5A]  ▐░░▌▐░░▌   ▐░█░█▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌ [/#E01E5A]|\n' +
+               '|[#E01E5A]   ▀▀ ▐░░▌   ▐░▌▐░▌    ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌ [/#E01E5A]|\n' +
+               '|[#E01E5A]      ▐░░▌   ▐░▌ ▐░▌   ▐░▌▐░▌          ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌ [/#E01E5A]|\n' +
+               '|[#E01E5A]      ▐░░▌   ▐░▌  ▐░▌  ▐░▌▐░▌          ▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░▌       ▐░▌ [/#E01E5A]|\n' +
+               '|[#E01E5A]      ▐░░▌   ▐░▌   ▐░▌ ▐░▌▐░▌          ▐░▌       ▐░▌▐░█▀▀▀▀█░█▀▀ ▐░▌       ▐░▌ [/#E01E5A]|\n' +
+               '|[#E01E5A]      ▐░░▌   ▐░▌    ▐░▌▐░▌▐░▌          ▐░▌       ▐░▌▐░▌     ▐░▌  ▐░▌       ▐░▌ [/#E01E5A]|\n' +
+               '|[#E01E5A]  ▄▄▄▄█░░█▄▄▄▐░█▄▄▄▄▄█░█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░▌      ▐░▌ ▐░█▄▄▄▄▄▄▄█░▌ [/#E01E5A]|\n' +
+               '|[#E01E5A] ▐░░░░░░░░░░░▌▐░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░▌       ▐░▌▐░░░░░░░░░░▌  [/#E01E5A]|\n' +
+               '|[#E01E5A]  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀  ▀▀▀▀▀▀▀▀▀▀   [/#E01E5A]|\n' +
+               '=================================================================================\n' +
+               '| Available commands:                                                           |\n' +
+               '|   :help - Show this help                                                      |\n' +
+               '|   :q - Exit 10cord                                                            |\n' +
+               '|   :attach - Attach a file (ex: :attach:/home/user/poop.png:Look, it\'s you!)   |\n' +
+               '|   :cr - Clear and Refresh the screen                                          |\n' +
+               '=================================================================================\n'
+               )
 
     def main_loop(self):
         """
@@ -379,15 +444,16 @@ class MyClient():
         The main function starts a thread for the main loop and then waits for user input to send a
         message.
         """
-
+        
+        self.print_welcome()
         self.main_loop_thread = threading.Thread(target=self.main_loop)
         self.main_loop_thread.start()
-
+        commands_list = [':q', ':help', ':cr']
         while 1:
             try:
                 time.sleep(1)
                 content = input()
-                if content != '' and ':q' not in content and ':attach' not in content:
+                if content != '' and ':attach' not in content and content not in commands_list:
                     message_sent = self.send_message(content)
                 else:
                     self.internal_command(content)
