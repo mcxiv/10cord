@@ -439,16 +439,35 @@ class MyClient():
             else:
                 time.sleep(0.1)
 
+    def list_guilds(self):
+        response = requests.get(
+            f'{self.url}/users/@me/guilds',
+            headers=self.headers,
+            timeout=5
+        )
+
+        if response.status_code != 200:
+            raise Exception(
+                f'Get guilds failed : {response.status_code} {response.text}')
+        
+        self.guilds = response.json()
+        # TODO: 
+        # - dynamic rprint guilds in welcome message (diff color for owned guilds)
+        # - prompt to choose guild
+        # - add guilds to internal commands
+        # - remove channel args. in command
+
     def main(self):
         """
         The main function starts a thread for the main loop and then waits for user input to send a
         message.
         """
-        
+
         self.print_welcome()
         self.main_loop_thread = threading.Thread(target=self.main_loop)
         self.main_loop_thread.start()
         commands_list = [':q', ':help', ':cr']
+
         while 1:
             try:
                 time.sleep(1)
