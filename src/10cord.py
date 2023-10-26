@@ -1,6 +1,9 @@
-import requests
-import fake_useragent
-from rich import print as rprint
+# -*- coding: utf-8 -*-
+# --------------------------------------------------
+# 10cord.py - A Discord client, entirely in your terminal.
+# Quentin Dufournet, 2023
+# --------------------------------------------------
+# Built-in
 import os
 import json
 import time
@@ -8,8 +11,14 @@ import argparse
 import threading
 import sys
 import subprocess as sp
-from emoji import EMOJI_DATA
 
+# 3rd party
+from emoji import EMOJI_DATA
+import requests
+import fake_useragent
+from rich import print as rprint
+
+# --------------------------------------------------
 
 def parse_args():
     """
@@ -480,7 +489,6 @@ class MyClient():
         for guild in self.guilds:
             self.list_channels_from_guild(guild['id'])
 
-
     def list_channels_from_guild(self, guild_id):
         """ Get channels from a guild
 
@@ -528,7 +536,7 @@ class MyClient():
                 channel_print = f'|     [#E01E5A]{local_id}[/#E01E5A] - {channel["name"]} - {channel["id"]}'
                 channel_length = len(channel_print.replace(
                     '[#E01E5A]', '').replace('[/#E01E5A]', ''))
-                
+
                 # Emoji or Special char. are 2 chars long
                 for char in channel['name']:
                     if char in EMOJI_DATA or char in ['｜']:
@@ -549,7 +557,6 @@ class MyClient():
                 content += channel_print
 
         content += '=================================================================================\n'
-
 
         return content
 
@@ -575,7 +582,7 @@ class MyClient():
             except ValueError:
                 sys.exit('Channel ID must be an integer')
             self.args.channel = self.list_id[int(self.args.channel)]
-        
+
         self.refresh_screen()
         self.main_loop_thread = threading.Thread(target=self.main_loop)
         self.main_loop_thread.start()
