@@ -558,6 +558,12 @@ class MyClient():
 
         self.list_guilds()
         self.print_welcome(self.rprint_guilds())
+        self.list_id = {}
+
+        for guild in self.guilds:
+            for channel in guild['channels']:
+                self.list_id[channel['local_id']] = channel['id']
+        print()
 
         if self.args.channel is None:
             self.args.channel = input('Channel ID: ')
@@ -565,16 +571,11 @@ class MyClient():
                 int(self.args.channel)
             except ValueError:
                 sys.exit('Channel ID must be an integer')
-
-            self.list_id = {}
-            for guild in self.guilds:
-                for channel in guild['channels']:
-                    self.list_id[channel['local_id']] = channel['id']
             self.args.channel = self.list_id[int(self.args.channel)]
-            print()
 
         self.main_loop_thread = threading.Thread(target=self.main_loop)
         self.main_loop_thread.start()
+
         commands_list = [':q', ':help', ':cr', ':list']
 
         while 1:
@@ -595,7 +596,6 @@ class MyClient():
 if __name__ == "__main__":
     client = MyClient()
     client.main()
-    print(UNICODE_EMOJI)
 
     # TODO:
     # [X] dynamic rprint guilds in welcome message (diff color for owned guilds)
