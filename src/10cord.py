@@ -292,6 +292,7 @@ class MyClient():
 
         :return: 1 if the upload was successful.
         """
+
         params = {
             'upload_id': link.split('upload_id=')[1]
         }
@@ -369,6 +370,7 @@ class MyClient():
                    '| :q - Exit 10cord           |\n' +
                    '| :attach - Attach a file    |\n' +
                    '| :cr - Clear and Refresh    |\n' +
+                   '| :list - List Guilds & Chan.|\n'
                    '=============================='
                    '[/#7289DA]'
                    )
@@ -433,8 +435,9 @@ class MyClient():
                '|   :q - Exit 10cord                                                            |\n' +
                '|   :attach - Attach a file (ex: :attach:/home/user/poop.png:Look, it\'s you!)   |\n' +
                '|   :cr - Clear and Refresh the screen                                          |\n' +
+               '|   :list - List Guilds & Channels                                              |\n'
                '=================================================================================\n' +
-               f'| Welcome [magenta]{self.get_username_from_id(self.user_id)} ![/magenta] Here are your [magenta]available guilds: [/magenta]                              |\n' +
+               f'| Welcome [magenta]{self.get_username_from_id(self.user_id)} ![/magenta] Here are your [magenta]available guilds & channels: [/magenta]                   |\n' +
                f'{guilds}'
                )
 
@@ -477,8 +480,6 @@ class MyClient():
         for guild in self.guilds:
             self.list_channels_from_guild(guild['id'])
 
-        with open('tmp/guilds.json', 'w', encoding='utf-8') as f:
-            json.dump(self.guilds, f, indent=4)
 
     def list_channels_from_guild(self, guild_id):
         """ Get channels from a guild
@@ -511,20 +512,24 @@ class MyClient():
             guild_print = f'|  - {guild["name"]} -'
             if guild['owner']:
                 guild_print += ' [#E01E5A](owner)[/#E01E5A]'
-            if len(guild_print.replace('[#E01E5A]', '').replace('[/#E01E5A]', '')) < 80:
+
+            guild_length = len(guild_print.replace(
+                '[#E01E5A]', '').replace('[/#E01E5A]', '')
+            )
+
+            if guild_length < 80:
                 guild_print += ' ' * \
-                    (80 - len(guild_print.replace('[#E01E5A]',
-                     '').replace('[/#E01E5A]', ''))) + '|\n'
+                    (80 - guild_length) + '|\n'
 
             content += guild_print
 
             for channel in self.guilds[self.guilds.index(guild)]['channels']:
-                channel_print = ''
                 local_id += 1
-                channel_print += f'|     [#E01E5A]{local_id}[/#E01E5A] - {channel["name"]} - {channel["id"]}'
+                channel_print = f'|     [#E01E5A]{local_id}[/#E01E5A] - {channel["name"]} - {channel["id"]}'
                 channel_length = len(channel_print.replace(
                     '[#E01E5A]', '').replace('[/#E01E5A]', ''))
-
+                
+                # Emoji or Special char. are 2 chars long
                 for char in channel['name']:
                     if char in EMOJI_DATA or char in ['｜']:
                         channel_length += 1
@@ -545,8 +550,6 @@ class MyClient():
 
         content += '=================================================================================\n'
 
-        with open('tmp/guilds.json', 'w', encoding='utf-8') as f:
-            json.dump(self.guilds, f, indent=4)
 
         return content
 
@@ -572,7 +575,8 @@ class MyClient():
             except ValueError:
                 sys.exit('Channel ID must be an integer')
             self.args.channel = self.list_id[int(self.args.channel)]
-
+        
+        self.refresh_screen()
         self.main_loop_thread = threading.Thread(target=self.main_loop)
         self.main_loop_thread.start()
 
