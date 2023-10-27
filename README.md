@@ -8,16 +8,9 @@ By using **10cord**, you can safely talk with your friends on Discord in your co
 
 ## Installation
 ```bash
-# Repo.
 git clone https://github.com/MCXIV/10cord.git
 cd 10cord
-
-# Python
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Libraries
-python3 -m pip install -r requirements.txt
+python3 -m pip install .
 ```
 
 ### Optional
@@ -36,7 +29,7 @@ sudo apt install chafa
 
 ## Usage
 ```
-python3 src/10cord.py -h
+10cord -h
 
 usage: 10cord.py [-h] [-c CHANNEL] [-a ATTACH] email password
 
@@ -51,7 +44,7 @@ options:
   -a ATTACH, --attach ATTACH
                         If true, displays attachments (Requires chafa)
 
-python3 src/10cord.py $EMAIL $PASSWORD
+10cord $EMAIL $PASSWORD
 ```
 
 ### Selecting a channel
