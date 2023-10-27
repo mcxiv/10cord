@@ -20,6 +20,7 @@ from rich import print as rprint
 
 # --------------------------------------------------
 
+
 def parse_args():
     """
     The `parse_args` function is used to parse command line arguments for the user's email,
@@ -512,7 +513,8 @@ class MyClient():
 
     def rprint_guilds(self):
         """ Print guilds and channels in a rich format """
-
+    
+        # TODO: Rework or idk, the code looks horrible af
         content = ''
         local_id = 0
 
@@ -556,7 +558,7 @@ class MyClient():
 
                 content += channel_print
 
-        content += '=================================================================================\n'
+        content += '================================================================================='
 
         return content
 
@@ -573,7 +575,6 @@ class MyClient():
         for guild in self.guilds:
             for channel in guild['channels']:
                 self.list_id[channel['local_id']] = channel['id']
-        print()
 
         if self.args.channel is None:
             self.args.channel = input('Channel ID: ')
@@ -604,12 +605,10 @@ class MyClient():
                 sys.exit()
 
 
-if __name__ == "__main__":
+def main():
     client = MyClient()
     client.main()
 
-    # TODO:
-    # [X] dynamic rprint guilds in welcome message (diff color for owned guilds)
-    # - prompt to choose guild
-    # - add guilds to internal commands
-    # [X] remove channel args. in command
+
+if __name__ == "__main__":
+    main()
