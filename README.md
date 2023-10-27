@@ -8,16 +8,9 @@ By using **10cord**, you can safely talk with your friends on Discord in your co
 
 ## Installation
 ```bash
-# Repo.
 git clone https://github.com/MCXIV/10cord.git
 cd 10cord
-
-# Python
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Libraries
-python3 -m pip install -r requirements.txt
+python3 -m pip install .
 ```
 
 ### Optional
@@ -36,22 +29,32 @@ sudo apt install chafa
 
 ## Usage
 ```
-python3 src/10cord.py -h
+10cord -h
 
-usage: 10cord.py [-h] [-a ATTACH] email password channel
+usage: 10cord.py [-h] [-c CHANNEL] [-a ATTACH] email password
 
 positional arguments:
   email                 User email
   password              User password
-  channel               Channel ID to get messages from
 
 options:
   -h, --help            show this help message and exit
+  -c CHANNEL, --channel CHANNEL
+                        Channel ID to get messages from
   -a ATTACH, --attach ATTACH
                         If true, displays attachments (Requires chafa)
 
-python3 src/10cord.py $EMAIL $PASSWORD $CHANNEL
+10cord $EMAIL $PASSWORD
 ```
+
+### Selecting a channel
+When you launch 10cord, a list of all your guilds and channels will be displayed. You can select a channel by typing its ID and pressing enter.
+
+![channel selection](docs/guilds.png "Channel selection")
+
+**Be careful, the ID to input is the `local channel ID`, which is to the left of the channel name.**
+
+You can also use the `-c` option to select a channel automatically. See [Usage](#usage).
 
 ### Sending messages
 To send a message, just type it and press enter.
@@ -64,6 +67,7 @@ To send an attachment, type `:attach:<path>:<content>` and press enter. `<path>`
 - `:attach:<path>:<content>` to send an attachment.
 - `:cr` to refresh the screen
 - `:help` to display the help message
+- `:list` to list all guilds and channels
 
 ## Demo
 ![demo example](docs/demo.gif "Demo example")

@@ -1,6 +1,9 @@
-import requests
-import fake_useragent
-from rich import print as rprint
+# -*- coding: utf-8 -*-
+# --------------------------------------------------
+# 10cord.py - A Discord client, entirely in your terminal.
+# Quentin Dufournet, 2023
+# --------------------------------------------------
+# Built-in
 import os
 import json
 import time
@@ -8,6 +11,14 @@ import argparse
 import threading
 import sys
 import subprocess as sp
+
+# 3rd party
+from emoji import EMOJI_DATA
+import requests
+import fake_useragent
+from rich import print as rprint
+
+# --------------------------------------------------
 
 
 def parse_args():
@@ -29,8 +40,9 @@ def parse_args():
         help='User password',
     )
     parser.add_argument(
-        'channel',
+        '-c', '--channel',
         help='Channel ID to get messages from',
+        default=None
     )
     parser.add_argument(
         '-a', '--attach',
@@ -109,7 +121,7 @@ class MyClient():
         """
 
         params = {
-            'limit': '50',
+            'limit': '100',
         }
 
         response = requests.get(
@@ -290,6 +302,7 @@ class MyClient():
 
         :return: 1 if the upload was successful.
         """
+
         params = {
             'upload_id': link.split('upload_id=')[1]
         }
@@ -367,6 +380,7 @@ class MyClient():
                    '| :q - Exit 10cord           |\n' +
                    '| :attach - Attach a file    |\n' +
                    '| :cr - Clear and Refresh    |\n' +
+                   '| :list - List Guilds & Chan.|\n'
                    '=============================='
                    '[/#7289DA]'
                    )
@@ -392,8 +406,24 @@ class MyClient():
                 )
             else:
                 rprint('[bold][red]File not found[/red][/bold]')
+        elif command == ':list':
+            rprint('\n[#7289DA]' +
+                   '=================================================================================\n' +
+                   self.rprint_guilds()
+                   )
 
-    def print_welcome(self):
+            self.args.channel = input('Channel ID: ')
+            try:
+                int(self.args.channel)
+            except ValueError:
+                self.kill_thread = True
+                self.main_loop_thread.join()
+                sys.exit('Channel ID must be an integer')
+
+            self.args.channel = self.list_id[int(self.args.channel)]
+            self.refresh_screen()
+
+    def print_welcome(self, guilds):
         """ Print the welcome message and the commands list """
 
         rprint('\n[#7289DA]' +
@@ -410,12 +440,15 @@ class MyClient():
                '|[#E01E5A] ▐░░░░░░░░░░░▌▐░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░▌       ▐░▌▐░░░░░░░░░░▌  [/#E01E5A]|\n' +
                '|[#E01E5A]  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀  ▀▀▀▀▀▀▀▀▀▀   [/#E01E5A]|\n' +
                '=================================================================================\n' +
-               '| Available commands:                                                           |\n' +
+               '| [magenta]Available commands: [/magenta]                                                          |\n' +
                '|   :help - Show this help                                                      |\n' +
                '|   :q - Exit 10cord                                                            |\n' +
                '|   :attach - Attach a file (ex: :attach:/home/user/poop.png:Look, it\'s you!)   |\n' +
                '|   :cr - Clear and Refresh the screen                                          |\n' +
-               '=================================================================================\n'
+               '|   :list - List Guilds & Channels                                              |\n'
+               '=================================================================================\n' +
+               f'| Welcome [magenta]{self.get_username_from_id(self.user_id)} ![/magenta] Here are your [magenta]available guilds & channels: [/magenta]                   |\n' +
+               f'{guilds}'
                )
 
     def main_loop(self):
@@ -439,16 +472,124 @@ class MyClient():
             else:
                 time.sleep(0.1)
 
+    def list_guilds(self):
+        """ Get guilds's user from Discord API """
+
+        response = requests.get(
+            f'{self.url}/users/@me/guilds',
+            headers=self.headers,
+            timeout=5
+        )
+
+        if response.status_code != 200:
+            raise Exception(
+                f'Get guilds failed : {response.status_code} {response.text}')
+
+        self.guilds = response.json()
+
+        for guild in self.guilds:
+            self.list_channels_from_guild(guild['id'])
+
+    def list_channels_from_guild(self, guild_id):
+        """ Get channels from a guild
+
+        :param guild_id: the id of the guild you want to get channels from
+        """
+
+        response = requests.get(
+            f'{self.url}/guilds/{guild_id}/channels',
+            headers=self.headers,
+            timeout=5
+        )
+
+        if response.status_code != 200:
+            raise Exception(
+                f'Get channels failed : {response.status_code} {response.text}')
+
+        list_channels = [channel for channel in response.json()
+                         if channel['type'] == 0]
+        self.guilds[self.guilds.index(
+            [guild for guild in self.guilds if guild['id'] == guild_id][0])]['channels'] = list_channels
+
+    def rprint_guilds(self):
+        """ Print guilds and channels in a rich format """
+    
+        # TODO: Rework or idk, the code looks horrible af
+        content = ''
+        local_id = 0
+
+        for guild in self.guilds:
+            guild_print = f'|  - {guild["name"]} -'
+            if guild['owner']:
+                guild_print += ' [#E01E5A](owner)[/#E01E5A]'
+
+            guild_length = len(guild_print.replace(
+                '[#E01E5A]', '').replace('[/#E01E5A]', '')
+            )
+
+            if guild_length < 80:
+                guild_print += ' ' * \
+                    (80 - guild_length) + '|\n'
+
+            content += guild_print
+
+            for channel in self.guilds[self.guilds.index(guild)]['channels']:
+                local_id += 1
+                channel_print = f'|     [#E01E5A]{local_id}[/#E01E5A] - {channel["name"]} - {channel["id"]}'
+                channel_length = len(channel_print.replace(
+                    '[#E01E5A]', '').replace('[/#E01E5A]', ''))
+
+                # Emoji or Special char. are 2 chars long
+                for char in channel['name']:
+                    if char in EMOJI_DATA or char in ['｜']:
+                        channel_length += 1
+
+                if channel_length > 80:
+                    channel_print = channel_print.replace(
+                        channel['name'], channel['name'][:80 - channel_length - 8] + '...')
+                    channel_length = len(channel_print.replace(
+                        '[#E01E5A]', '').replace('[/#E01E5A]', '')) + 1
+
+                channel_print += ' ' * \
+                    (80 - channel_length) + '|\n'
+
+                self.guilds[self.guilds.index(guild)]['channels'][self.guilds[self.guilds.index(guild)]['channels'].index(
+                    channel)]['local_id'] = local_id
+
+                content += channel_print
+
+        content += '================================================================================='
+
+        return content
+
     def main(self):
         """
         The main function starts a thread for the main loop and then waits for user input to send a
         message.
         """
-        
-        self.print_welcome()
+
+        self.list_guilds()
+        self.print_welcome(self.rprint_guilds())
+        self.list_id = {}
+
+        for guild in self.guilds:
+            for channel in guild['channels']:
+                self.list_id[channel['local_id']] = channel['id']
+
+        if self.args.channel is None:
+            self.args.channel = input('Channel ID: ')
+            try:
+                int(self.args.channel)
+            except ValueError:
+                sys.exit('Channel ID must be an integer')
+            self.args.channel = self.list_id[int(self.args.channel)]
+
+        self.refresh_screen()
         self.main_loop_thread = threading.Thread(target=self.main_loop)
         self.main_loop_thread.start()
-        commands_list = [':q', ':help', ':cr']
+
+        commands_list = [':q', ':help', ':cr', ':list']
+
         while 1:
             try:
                 time.sleep(1)
@@ -464,6 +605,10 @@ class MyClient():
                 sys.exit()
 
 
-if __name__ == "__main__":
+def main():
     client = MyClient()
     client.main()
+
+
+if __name__ == "__main__":
+    main()
