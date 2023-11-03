@@ -434,7 +434,9 @@ class MyClient():
                 self.running = False
 
             self.args.channel = self.list_id[int(self.args.channel)]
-
+            self.main_loop_thread = threading.Thread(target=self.main_loop)
+            self.main_loop_thread.start()
+        
         elif command == ':fr':
             rprint('\n[#7289DA]' +
                    '=================================================================================\n' +
@@ -453,8 +455,10 @@ class MyClient():
                 self.kill_thread = True
                 self.main_loop_thread.join()
                 self.running = False
-
+            
             self.args.channel = self.friends[int(self.args.channel) - 1]['id']
+            self.main_loop_thread = threading.Thread(target=self.main_loop)
+            self.main_loop_thread.start()
 
     def print_welcome(self):
         """ Print the welcome message and the commands list """
@@ -707,9 +711,7 @@ class MyClient():
                 print('Please, select a channel first')
             else:
                 self.internal_command(command)
-
-        self.main_loop_thread = threading.Thread(target=self.main_loop)
-        self.main_loop_thread.start()
+ 
         self.refresh_screen()
 
         commands_list = [':q', ':help', ':cr', ':li', ':fr', ':we']
