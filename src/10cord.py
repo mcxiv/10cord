@@ -392,6 +392,7 @@ class MyClient():
             if self.running:
                 self.kill_thread = True
                 self.main_loop_thread.join()
+            self.clean()
             sys.exit()
 
         elif command == ':cr':
@@ -433,8 +434,6 @@ class MyClient():
                 self.running = False
 
             self.args.channel = self.list_id[int(self.args.channel)]
-            self.main_loop_thread = threading.Thread(target=self.main_loop)
-            self.main_loop_thread.start()
 
         elif command == ':fr':
             rprint('\n[#7289DA]' +
@@ -456,8 +455,6 @@ class MyClient():
                 self.running = False
 
             self.args.channel = self.friends[int(self.args.channel) - 1]['id']
-            self.main_loop_thread = threading.Thread(target=self.main_loop)
-            self.main_loop_thread.start()
 
     def print_welcome(self):
         """ Print the welcome message and the commands list """
@@ -655,6 +652,13 @@ class MyClient():
 
         return content
 
+    def clean(self):
+        """ Clean the tmp folder """
+
+        for file in os.listdir('./tmp'):
+            os.remove(f'./tmp/{file}')
+        os.rmdir('./tmp')
+
     def main(self):
         """
         The main function starts a thread for the main loop and then waits for user input to send a
@@ -680,7 +684,7 @@ class MyClient():
             :param symbol: the current symbol of the loading bar
             :return: the next symbol of the loading bar
             """
-            
+
             symbols = ['|', '/', '-', '\\']
             return symbols[symbols.index(symbol) + 1] if symbols.index(symbol) < 3 else symbols[0]
 
@@ -692,7 +696,7 @@ class MyClient():
             symbol = loading_bar(symbol)
             print(f'Loading... {loading_bar(symbol)}', end='\r')
             time.sleep(0.1)
-    
+
         for guild in self.guilds:
             for channel in guild['channels']:
                 self.list_id[channel['local_id']] = channel['id']
@@ -704,6 +708,8 @@ class MyClient():
             else:
                 self.internal_command(command)
 
+        self.main_loop_thread = threading.Thread(target=self.main_loop)
+        self.main_loop_thread.start()
         self.refresh_screen()
 
         commands_list = [':q', ':help', ':cr', ':li', ':fr', ':we']
@@ -720,6 +726,7 @@ class MyClient():
             except KeyboardInterrupt:
                 self.kill_thread = True
                 self.main_loop_thread.join()
+                self.clean()
                 sys.exit()
 
 
