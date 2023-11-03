@@ -380,15 +380,18 @@ class MyClient():
                    '| :q - Exit 10cord           |\n' +
                    '| :attach - Attach a file    |\n' +
                    '| :cr - Clear and Refresh    |\n' +
-                   '| :list - List Guilds & Chan.|\n'
+                   '| :li - List Guilds & Chan.|\n'
+                   '| :fr - List Friends    |\n'
+                   '| :we - Print welcome message|\n'
                    '=============================='
                    '[/#7289DA]'
                    )
             rprint()
 
         elif command == ':q':
-            self.kill_thread = True
-            self.main_loop_thread.join()
+            if self.running:
+                self.kill_thread = True
+                self.main_loop_thread.join()
             sys.exit()
 
         elif command == ':cr':
@@ -406,7 +409,11 @@ class MyClient():
                 )
             else:
                 rprint('[bold][red]File not found[/red][/bold]')
-        elif command == ':list':
+
+        elif command == ':we':
+            self.print_welcome()
+
+        elif command == ':li':
             rprint('\n[#7289DA]' +
                    '=================================================================================\n' +
                    self.rprint_guilds()
@@ -420,11 +427,48 @@ class MyClient():
                 self.main_loop_thread.join()
                 sys.exit('Channel ID must be an integer')
 
-            self.args.channel = self.list_id[int(self.args.channel)]
-            self.refresh_screen()
+            if self.running:
+                self.kill_thread = True
+                self.main_loop_thread.join()
+                self.running = False
 
-    def print_welcome(self, guilds):
+            self.args.channel = self.list_id[int(self.args.channel)]
+            self.main_loop_thread = threading.Thread(target=self.main_loop)
+            self.main_loop_thread.start()
+
+        elif command == ':fr':
+            rprint('\n[#7289DA]' +
+                   '=================================================================================\n' +
+                   self.rprint_friends()
+                   )
+
+            self.args.channel = input('Channel ID: ')
+            try:
+                int(self.args.channel)
+            except ValueError:
+                self.kill_thread = True
+                self.main_loop_thread.join()
+                sys.exit('Channel ID must be an integer')
+
+            if self.running:
+                self.kill_thread = True
+                self.main_loop_thread.join()
+                self.running = False
+
+            self.args.channel = self.friends[int(self.args.channel) - 1]['id']
+            self.main_loop_thread = threading.Thread(target=self.main_loop)
+            self.main_loop_thread.start()
+
+    def print_welcome(self):
         """ Print the welcome message and the commands list """
+
+        welcome_message = f'Welcome [magenta]{self.get_username_from_id(self.user_id)}[/magenta] !'
+        length_welcome_message = len(welcome_message.replace(
+            '[magenta]', '').replace('[/magenta]', ''))
+        if length_welcome_message < 80:
+            welcome_message = '|' + (' ' * ((80 - length_welcome_message) // 2)) + \
+                welcome_message + \
+                (' ' * ((80 - length_welcome_message) // 2)) + '|'
 
         rprint('\n[#7289DA]' +
                '=================================================================================\n' +
@@ -440,15 +484,17 @@ class MyClient():
                '|[#E01E5A] ▐░░░░░░░░░░░▌▐░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░▌       ▐░▌▐░░░░░░░░░░▌  [/#E01E5A]|\n' +
                '|[#E01E5A]  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀  ▀▀▀▀▀▀▀▀▀▀   [/#E01E5A]|\n' +
                '=================================================================================\n' +
+               f'{welcome_message}\n' +
+               '=================================================================================\n'
                '| [magenta]Available commands: [/magenta]                                                          |\n' +
                '|   :help - Show this help                                                      |\n' +
                '|   :q - Exit 10cord                                                            |\n' +
                '|   :attach - Attach a file (ex: :attach:/home/user/poop.png:Look, it\'s you!)   |\n' +
                '|   :cr - Clear and Refresh the screen                                          |\n' +
-               '|   :list - List Guilds & Channels                                              |\n'
-               '=================================================================================\n' +
-               f'| Welcome [magenta]{self.get_username_from_id(self.user_id)} ![/magenta] Here are your [magenta]available guilds & channels: [/magenta]                   |\n' +
-               f'{guilds}'
+               '|   :li - List Guilds & Channels                                                |\n'
+               '|   :fr - List Friends                                                          |\n'
+               '|   :we - Print welcome message                                                 |\n'
+               '=================================================================================[/#7289DA]'
                )
 
     def main_loop(self):
@@ -460,6 +506,7 @@ class MyClient():
         self.messages = self.get_messages()
         self.print_messages(self.messages)
         self.kill_thread = False
+        self.running = True
 
         started = time.time()
         while not self.kill_thread:
@@ -471,6 +518,23 @@ class MyClient():
                 started = time.time()
             else:
                 time.sleep(0.1)
+
+    def list_friends(self):
+        """ Get friends from Discord API """
+
+        response = requests.get(
+            f'{self.url}/users/@me/channels',
+            headers=self.headers,
+            timeout=5
+        )
+
+        if response.status_code != 200:
+            raise Exception(
+                f'Get friends failed : {response.status_code} {response.text}')
+
+        list_friends = [element for element in response.json()
+                        if element['type'] == 1]
+        self.friends = list_friends
 
     def list_guilds(self):
         """ Get guilds's user from Discord API """
@@ -489,6 +553,35 @@ class MyClient():
 
         for guild in self.guilds:
             self.list_channels_from_guild(guild['id'])
+
+    def rprint_friends(self):
+        """ Print friends in a rich format """
+
+        content = ''
+        local_id = 0
+
+        for friend in self.friends:
+            local_id += 1
+            friend_print = f'|  [#E01E5A]{local_id}[/#E01E5A] - {friend["recipients"][0]["username"]} - {friend["id"]}'
+            friend_length = len(friend_print.replace(
+                '[#E01E5A]', '').replace('[/#E01E5A]', ''))
+
+            if friend_length > 80:
+                friend_print = friend_print.replace(
+                    friend["recipients"][0]["id"], friend["recipients"][0]["id"][:80 - friend_length - 8] + '...')
+                friend_length = len(friend_print.replace(
+                    '[#E01E5A]', '').replace('[/#E01E5A]', '')) + 1
+
+            friend_print += ' ' * \
+                (80 - friend_length) + '|\n'
+
+            self.friends[self.friends.index(friend)]['local_id'] = local_id
+
+            content += friend_print
+
+        content += '================================================================================='
+
+        return content
 
     def list_channels_from_guild(self, guild_id):
         """ Get channels from a guild
@@ -513,7 +606,7 @@ class MyClient():
 
     def rprint_guilds(self):
         """ Print guilds and channels in a rich format """
-    
+
         # TODO: Rework or idk, the code looks horrible af
         content = ''
         local_id = 0
@@ -568,27 +661,52 @@ class MyClient():
         message.
         """
 
-        self.list_guilds()
-        self.print_welcome(self.rprint_guilds())
+        self.print_welcome()
+
+        self.running = False
         self.list_id = {}
 
+        def query_data():
+            """ Query data from Discord API in a thread """
+
+            self.list_friends()
+            self.rprint_friends()
+            self.list_guilds()
+            self.rprint_guilds()
+
+        def loading_bar(symbol):
+            """ Simple loading bar while we fetch the datas from the API
+
+            :param symbol: the current symbol of the loading bar
+            :return: the next symbol of the loading bar
+            """
+            
+            symbols = ['|', '/', '-', '\\']
+            return symbols[symbols.index(symbol) + 1] if symbols.index(symbol) < 3 else symbols[0]
+
+        query_data_thread = threading.Thread(target=query_data)
+        query_data_thread.start()
+
+        symbol = '|'
+        while query_data_thread.is_alive():
+            symbol = loading_bar(symbol)
+            print(f'Loading... {loading_bar(symbol)}', end='\r')
+            time.sleep(0.1)
+    
         for guild in self.guilds:
             for channel in guild['channels']:
                 self.list_id[channel['local_id']] = channel['id']
 
-        if self.args.channel is None:
-            self.args.channel = input('Channel ID: ')
-            try:
-                int(self.args.channel)
-            except ValueError:
-                sys.exit('Channel ID must be an integer')
-            self.args.channel = self.list_id[int(self.args.channel)]
+        while self.args.channel is None:
+            command = input('What should we do : ')
+            if command == ':cr' or ':attach' in command:
+                print('Please, select a channel first')
+            else:
+                self.internal_command(command)
 
         self.refresh_screen()
-        self.main_loop_thread = threading.Thread(target=self.main_loop)
-        self.main_loop_thread.start()
 
-        commands_list = [':q', ':help', ':cr', ':list']
+        commands_list = [':q', ':help', ':cr', ':li', ':fr', ':we']
 
         while 1:
             try:
