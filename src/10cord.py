@@ -353,173 +353,6 @@ class MyClient():
 
         self.send_message(content, attachment_data)
 
-    def refresh_screen(self):
-        """ Refresh the screen and print the last messages """
-
-        os.system('clear') if os.name == 'posix' else os.system('cls')
-        self.messages = []
-        new_messages = self.get_messages()
-        diff_messages = self.diff_messages(new_messages, self.messages)
-        self.print_messages(diff_messages)
-        self.messages = new_messages
-
-    def internal_command(self, command):
-        """
-        The `internal_command` function is used to execute internal commands.
-
-        :param command: The `command` parameter is the command you want to execute.
-        """
-
-        if command == ':help':
-            rprint()
-            rprint('[#7289DA]' +
-                   '==============================\n' +
-                   '|[#E01E5A]       Commands list:       [/#E01E5A]|\n' +
-                   '==============================\n'
-                   '| :help - Show this help     |\n' +
-                   '| :q - Exit 10cord           |\n' +
-                   '| :attach - Attach a file    |\n' +
-                   '| :cr - Clear and Refresh    |\n' +
-                   '| :li - List Guilds & Chan.|\n'
-                   '| :fr - List Friends    |\n'
-                   '| :we - Print welcome message|\n'
-                   '=============================='
-                   '[/#7289DA]'
-                   )
-            rprint()
-
-        elif command == ':q':
-            if self.running:
-                self.kill_thread = True
-                self.main_loop_thread.join()
-            self.clean()
-            sys.exit()
-
-        elif command == ':cr':
-            self.refresh_screen()
-
-        elif ':attach:' in command:
-            attachment = command.split(':')[2]
-            if len(command.split(':')) == 4:
-                content = command.split(':')[3]
-            else:
-                content = ''
-            if os.path.exists(attachment):
-                self.put_attachment(
-                    attachment, os.path.getsize(attachment), content
-                )
-            else:
-                rprint('[bold][red]File not found[/red][/bold]')
-
-        elif command == ':we':
-            self.print_welcome()
-
-        elif command == ':li':
-            rprint('\n[#7289DA]' +
-                   '=================================================================================\n' +
-                   self.rprint_guilds()
-                   )
-
-            self.args.channel = input('Channel ID: ')
-            try:
-                int(self.args.channel)
-            except ValueError:
-                self.kill_thread = True
-                self.main_loop_thread.join()
-                sys.exit('Channel ID must be an integer')
-
-            if self.running:
-                self.kill_thread = True
-                self.main_loop_thread.join()
-                self.running = False
-
-            self.args.channel = self.list_id[int(self.args.channel)]
-            self.main_loop_thread = threading.Thread(target=self.main_loop)
-            self.main_loop_thread.start()
-        
-        elif command == ':fr':
-            rprint('\n[#7289DA]' +
-                   '=================================================================================\n' +
-                   self.rprint_friends()
-                   )
-
-            self.args.channel = input('Channel ID: ')
-            try:
-                int(self.args.channel)
-            except ValueError:
-                self.kill_thread = True
-                self.main_loop_thread.join()
-                sys.exit('Channel ID must be an integer')
-
-            if self.running:
-                self.kill_thread = True
-                self.main_loop_thread.join()
-                self.running = False
-            
-            self.args.channel = self.friends[int(self.args.channel) - 1]['id']
-            self.main_loop_thread = threading.Thread(target=self.main_loop)
-            self.main_loop_thread.start()
-
-    def print_welcome(self):
-        """ Print the welcome message and the commands list """
-
-        welcome_message = f'Welcome [magenta]{self.get_username_from_id(self.user_id)}[/magenta] !'
-        length_welcome_message = len(welcome_message.replace(
-            '[magenta]', '').replace('[/magenta]', ''))
-        if length_welcome_message < 80:
-            welcome_message = '|' + (' ' * ((80 - length_welcome_message) // 2)) + \
-                welcome_message + \
-                (' ' * ((80 - length_welcome_message) // 2)) + '|'
-
-        rprint('\n[#7289DA]' +
-               '=================================================================================\n' +
-               '|[#E01E5A]     ▄▄▄▄      ▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   [/#E01E5A]|\n' +
-               '|[#E01E5A]   ▄█░░░░▌    ▐░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░▌  [/#E01E5A]|\n' +
-               '|[#E01E5A]  ▐░░▌▐░░▌   ▐░█░█▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌ [/#E01E5A]|\n' +
-               '|[#E01E5A]   ▀▀ ▐░░▌   ▐░▌▐░▌    ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌ [/#E01E5A]|\n' +
-               '|[#E01E5A]      ▐░░▌   ▐░▌ ▐░▌   ▐░▌▐░▌          ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌ [/#E01E5A]|\n' +
-               '|[#E01E5A]      ▐░░▌   ▐░▌  ▐░▌  ▐░▌▐░▌          ▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░▌       ▐░▌ [/#E01E5A]|\n' +
-               '|[#E01E5A]      ▐░░▌   ▐░▌   ▐░▌ ▐░▌▐░▌          ▐░▌       ▐░▌▐░█▀▀▀▀█░█▀▀ ▐░▌       ▐░▌ [/#E01E5A]|\n' +
-               '|[#E01E5A]      ▐░░▌   ▐░▌    ▐░▌▐░▌▐░▌          ▐░▌       ▐░▌▐░▌     ▐░▌  ▐░▌       ▐░▌ [/#E01E5A]|\n' +
-               '|[#E01E5A]  ▄▄▄▄█░░█▄▄▄▐░█▄▄▄▄▄█░█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░▌      ▐░▌ ▐░█▄▄▄▄▄▄▄█░▌ [/#E01E5A]|\n' +
-               '|[#E01E5A] ▐░░░░░░░░░░░▌▐░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░▌       ▐░▌▐░░░░░░░░░░▌  [/#E01E5A]|\n' +
-               '|[#E01E5A]  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀  ▀▀▀▀▀▀▀▀▀▀   [/#E01E5A]|\n' +
-               '=================================================================================\n' +
-               f'{welcome_message}\n' +
-               '=================================================================================\n'
-               '| [magenta]Available commands: [/magenta]                                                          |\n' +
-               '|   :help - Show this help                                                      |\n' +
-               '|   :q - Exit 10cord                                                            |\n' +
-               '|   :attach - Attach a file (ex: :attach:/home/user/poop.png:Look, it\'s you!)   |\n' +
-               '|   :cr - Clear and Refresh the screen                                          |\n' +
-               '|   :li - List Guilds & Channels                                                |\n'
-               '|   :fr - List Friends                                                          |\n'
-               '|   :we - Print welcome message                                                 |\n'
-               '=================================================================================[/#7289DA]'
-               )
-
-    def main_loop(self):
-        """
-        The main_loop function retrieves and prints messages, then continuously checks for new
-        messages and prints any differences.
-        """
-
-        self.messages = self.get_messages()
-        self.print_messages(self.messages)
-        self.kill_thread = False
-        self.running = True
-
-        started = time.time()
-        while not self.kill_thread:
-            if time.time() - started >= 3:
-                new_messages = self.get_messages()
-                diff_messages = self.diff_messages(new_messages, self.messages)
-                self.print_messages(diff_messages)
-                self.messages = new_messages
-                started = time.time()
-            else:
-                time.sleep(0.1)
-
     def list_friends(self):
         """ Get friends from Discord API """
 
@@ -566,6 +399,11 @@ class MyClient():
             friend_print = f'|  [#E01E5A]{local_id}[/#E01E5A] - {friend["recipients"][0]["username"]} - {friend["id"]}'
             friend_length = len(friend_print.replace(
                 '[#E01E5A]', '').replace('[/#E01E5A]', ''))
+
+            # Emoji or Special char. are 2 chars long
+            for char in friend["recipients"][0]["username"]:
+                if char in EMOJI_DATA:
+                    friend_length += 1
 
             if friend_length > 80:
                 friend_print = friend_print.replace(
@@ -656,6 +494,175 @@ class MyClient():
 
         return content
 
+    def refresh_screen(self):
+        """ Refresh the screen and print the last messages """
+
+        os.system('clear') if os.name == 'posix' else os.system('cls')
+        self.messages = []
+        new_messages = self.get_messages()
+        diff_messages = self.diff_messages(new_messages, self.messages)
+        self.print_messages(diff_messages)
+        self.messages = new_messages
+
+    def internal_command(self, command):
+        """
+        The `internal_command` function is used to execute internal commands.
+
+        :param command: The `command` parameter is the command you want to execute.
+        """
+
+        if command == ':help':
+            rprint()
+            rprint('[#7289DA]' +
+                   '==============================\n' +
+                   '|[#E01E5A]       Commands list:       [/#E01E5A]|\n' +
+                   '==============================\n'
+                   '| :help - Show this help     |\n' +
+                   '| :q - Exit 10cord           |\n' +
+                   '| :attach - Attach a file    |\n' +
+                   '| :cr - Clear and Refresh    |\n' +
+                   '| :li - List Guilds & Chan.|\n'
+                   '| :fr - List Friends    |\n'
+                   '| :we - Print welcome message|\n'
+                   '=============================='
+                   '[/#7289DA]'
+                   )
+            rprint()
+
+        elif command == ':q':
+            if self.running:
+                self.kill_thread = True
+                self.main_loop_thread.join()
+            self.clean()
+            sys.exit()
+
+        elif command == ':cr':
+            self.refresh_screen()
+
+        elif ':attach:' in command:
+            attachment = command.split(':')[2]
+            if len(command.split(':')) == 4:
+                content = command.split(':')[3]
+            else:
+                content = ''
+            if os.path.exists(attachment):
+                self.put_attachment(
+                    attachment, os.path.getsize(attachment), content
+                )
+            else:
+                rprint('[bold][red]File not found[/red][/bold]')
+
+        elif command == ':we':
+            self.print_welcome()
+
+        elif command == ':li':
+            rprint('\n[#7289DA]' +
+                   '=================================================================================\n' +
+                   self.rprint_guilds()
+                   )
+
+            self.args.channel = input('Channel ID: ')
+            try:
+                int(self.args.channel)
+            except ValueError:
+                self.kill_thread = True
+                self.main_loop_thread.join()
+                sys.exit('Channel ID must be an integer')
+
+            if self.running:
+                self.kill_thread = True
+                self.main_loop_thread.join()
+                self.running = False
+
+            self.args.channel = self.list_id[int(self.args.channel)]
+            self.main_loop_thread = threading.Thread(target=self.main_loop)
+            self.main_loop_thread.start()
+            self.refresh_screen()
+
+        elif command == ':fr':
+            rprint('\n[#7289DA]' +
+                   '=================================================================================\n' +
+                   self.rprint_friends()
+                   )
+
+            self.args.channel = input('Channel ID: ')
+            try:
+                int(self.args.channel)
+            except ValueError:
+                self.kill_thread = True
+                self.main_loop_thread.join()
+                sys.exit('Channel ID must be an integer')
+
+            if self.running:
+                self.kill_thread = True
+                self.main_loop_thread.join()
+                self.running = False
+
+            self.args.channel = self.friends[int(self.args.channel) - 1]['id']
+            self.main_loop_thread = threading.Thread(target=self.main_loop)
+            self.main_loop_thread.start()
+            self.refresh_screen()
+
+    def print_welcome(self):
+        """ Print the welcome message and the commands list """
+
+        welcome_message = f'Welcome [magenta]{self.get_username_from_id(self.user_id)}[/magenta] !'
+        length_welcome_message = len(welcome_message.replace(
+            '[magenta]', '').replace('[/magenta]', ''))
+        if length_welcome_message < 80:
+            welcome_message = '|' + (' ' * ((80 - length_welcome_message) // 2)) + \
+                welcome_message + \
+                (' ' * ((80 - length_welcome_message) // 2)) + '|'
+
+        rprint('\n[#7289DA]' +
+               '=================================================================================\n' +
+               '|[#E01E5A]     ▄▄▄▄      ▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   [/#E01E5A]|\n' +
+               '|[#E01E5A]   ▄█░░░░▌    ▐░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░▌  [/#E01E5A]|\n' +
+               '|[#E01E5A]  ▐░░▌▐░░▌   ▐░█░█▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌ [/#E01E5A]|\n' +
+               '|[#E01E5A]   ▀▀ ▐░░▌   ▐░▌▐░▌    ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌ [/#E01E5A]|\n' +
+               '|[#E01E5A]      ▐░░▌   ▐░▌ ▐░▌   ▐░▌▐░▌          ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌ [/#E01E5A]|\n' +
+               '|[#E01E5A]      ▐░░▌   ▐░▌  ▐░▌  ▐░▌▐░▌          ▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░▌       ▐░▌ [/#E01E5A]|\n' +
+               '|[#E01E5A]      ▐░░▌   ▐░▌   ▐░▌ ▐░▌▐░▌          ▐░▌       ▐░▌▐░█▀▀▀▀█░█▀▀ ▐░▌       ▐░▌ [/#E01E5A]|\n' +
+               '|[#E01E5A]      ▐░░▌   ▐░▌    ▐░▌▐░▌▐░▌          ▐░▌       ▐░▌▐░▌     ▐░▌  ▐░▌       ▐░▌ [/#E01E5A]|\n' +
+               '|[#E01E5A]  ▄▄▄▄█░░█▄▄▄▐░█▄▄▄▄▄█░█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░▌      ▐░▌ ▐░█▄▄▄▄▄▄▄█░▌ [/#E01E5A]|\n' +
+               '|[#E01E5A] ▐░░░░░░░░░░░▌▐░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░▌       ▐░▌▐░░░░░░░░░░▌  [/#E01E5A]|\n' +
+               '|[#E01E5A]  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀  ▀▀▀▀▀▀▀▀▀▀   [/#E01E5A]|\n' +
+               '=================================================================================\n' +
+               f'{welcome_message}\n' +
+               '=================================================================================\n'
+               '| [magenta]Available commands: [/magenta]                                                          |\n' +
+               '|   :help - Show this help                                                      |\n' +
+               '|   :q - Exit 10cord                                                            |\n' +
+               '|   :attach - Attach a file (ex: :attach:/home/user/poop.png:Look, it\'s you!)   |\n' +
+               '|   :cr - Clear and Refresh the screen                                          |\n' +
+               '|   :li - List Guilds & Channels                                                |\n'
+               '|   :fr - List Friends                                                          |\n'
+               '|   :we - Print welcome message                                                 |\n'
+               '=================================================================================[/#7289DA]'
+               )
+
+    def main_loop(self):
+        """
+        The main_loop function retrieves and prints messages, then continuously checks for new
+        messages and prints any differences.
+        """
+
+        self.messages = self.get_messages()
+        self.print_messages(self.messages)
+        self.kill_thread = False
+        self.running = True
+
+        started = time.time()
+        while not self.kill_thread:
+            if time.time() - started >= 3:
+                new_messages = self.get_messages()
+                diff_messages = self.diff_messages(new_messages, self.messages)
+                self.print_messages(diff_messages)
+                self.messages = new_messages
+                started = time.time()
+            else:
+                time.sleep(0.1)
+
     def clean(self):
         """ Clean the tmp folder """
 
@@ -711,8 +718,6 @@ class MyClient():
                 print('Please, select a channel first')
             else:
                 self.internal_command(command)
- 
-        self.refresh_screen()
 
         commands_list = [':q', ':help', ':cr', ':li', ':fr', ':we']
 
