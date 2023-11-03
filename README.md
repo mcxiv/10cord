@@ -48,13 +48,21 @@ options:
 ```
 
 ### Selecting a channel
-When you launch 10cord, a list of all your guilds and channels will be displayed. You can select a channel by typing its ID and pressing enter.
-
-![channel selection](docs/guilds.png "Channel selection")
+When you launch 10cord, and type `:li` or `:fr`, a list of all your guilds and channels or friends will be displayed. You can select a channel by typing its ID and pressing enter.
 
 **Be careful, the ID to input is the `local channel ID`, which is to the left of the channel name.**
 
-You can also use the `-c` option to select a channel automatically. See [Usage](#usage).
+You can also use the `-c` option to select a channel automatically (By using the Discord's ID). See [Usage](#usage).
+
+#### Guilds & channels
+
+![channel selection](docs/guilds.png "Channel selection")
+
+#### Friends
+
+![friend selection](docs/friends.png "Friend selection")
+
+*The name `friends` is misleading. This is actually people you DMed.*
 
 ### Sending messages
 To send a message, just type it and press enter.
@@ -67,7 +75,9 @@ To send an attachment, type `:attach:<path>:<content>` and press enter. `<path>`
 - `:attach:<path>:<content>` to send an attachment.
 - `:cr` to refresh the screen
 - `:help` to display the help message
-- `:list` to list all guilds and channels
+- `:li` to list all guilds and channels
+- `:fr` to list all friends
+- `:we` to print the welcome message again
 
 ## Demo
 ![demo example](docs/demo.gif "Demo example")
