@@ -82,7 +82,8 @@ class MyClient():
 
     def login(self):
         """
-        The `login` function sends a POST request to a specified URL with login credentials, and if
+        The `login` function sends a POST request to a specified URL with login credentials,
+        and if
         successful, saves the user ID, token, and timestamp to a JSON file.
         """
 
@@ -114,8 +115,8 @@ class MyClient():
 
     def get_messages(self):
         """
-        The function `get_messages` retrieves the latest 100 messages from a specified channel using the
-        Discord server.
+        The function `get_messages` retrieves the latest 100 messages from a specified
+        channel using the Discord server.
 
         :return: a list of messages.
         """
@@ -144,7 +145,8 @@ class MyClient():
         """
         The function "print_messages" takes in a list of messages and prints them.
 
-        :param messages: The "messages" parameter is a list of messages that you want to print
+        :param messages: The "messages" parameter is a list of messages that you want to
+        print
         """
 
         for message in messages:
@@ -191,8 +193,8 @@ class MyClient():
 
     def diff_messages(self, messages1, messages2):
         """
-        The function `diff_messages` takes two lists of messages and returns a new list containing
-        messages that are in the first list but not in the second list.
+        The function `diff_messages` takes two lists of messages and returns a new list
+        containing messages that are in the first list but not in the second list.
 
         :param messages1: A list of messages
         :param messages2: An other list of messages
@@ -209,7 +211,8 @@ class MyClient():
 
     def send_message(self, content, attachments=[]):
         """
-        The `send_message` function sends a message to a specified channel using the Discord API.
+        The `send_message` function sends a message to a specified channel using the
+        Discord API.
 
         :param content: Message content that you want to send.
 
@@ -238,13 +241,13 @@ class MyClient():
 
     def get_username_from_id(self, user_id):
         """
-        The function `get_username_from_id` retrieves the username associated with a given user ID
-        from the Discord API.
+        The function `get_username_from_id` retrieves the username associated with a
+        given user ID from the Discord API.
 
         :param user_id: Unique identifier of a user.
 
-        :return: the username of the user with the given user_id if the response status code is 200.
-        Otherwise, it returns the user_id itself.
+        :return: the username of the user with the given user_id if the response status
+        code is 200. Otherwise, it returns the user_id itself.
         """
 
         response = requests.get(
@@ -263,7 +266,8 @@ class MyClient():
 
     def request_upload_attachment(self, path, size):
         """
-        This function requests an upload link for a file to a specified channel using the Discord API.
+        This function requests an upload link for a file to a specified channel using
+        the Discord API.
 
         :param path: Path of the file you want to send.
         :param size: Size of the file you want to send.
@@ -329,7 +333,8 @@ class MyClient():
 
         :param path: The `path` parameter is the path of the file you want to send.
         :param size: The `size` parameter is the size of the file you want to send.
-        :param content: The `content` parameter is the message content that you want to send.
+        :param content: The `content` parameter is the message content that you want
+        to send.
 
         :return: Nothing if the file can't be found.
         """
@@ -396,7 +401,8 @@ class MyClient():
 
         for friend in self.friends:
             local_id += 1
-            friend_print = f'|  [#E01E5A]{local_id}[/#E01E5A] - {friend["recipients"][0]["username"]} - {friend["id"]}'
+            friend_print = f'|  [#E01E5A]{local_id}[/#E01E5A] - ' + \
+                f'{friend["recipients"][0]["username"]} - {friend["id"]}'
             friend_length = len(friend_print.replace(
                 '[#E01E5A]', '').replace('[/#E01E5A]', ''))
 
@@ -407,7 +413,10 @@ class MyClient():
 
             if friend_length > 80:
                 friend_print = friend_print.replace(
-                    friend["recipients"][0]["id"], friend["recipients"][0]["id"][:80 - friend_length - 8] + '...')
+                    friend["recipients"][0]["id"],
+                    friend["recipients"][0]["id"][:80 -
+                                                  friend_length - 8] + '...'
+                )
                 friend_length = len(friend_print.replace(
                     '[#E01E5A]', '').replace('[/#E01E5A]', '')) + 1
 

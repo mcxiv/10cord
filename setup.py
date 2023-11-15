@@ -9,7 +9,7 @@ setuptools.setup(
     install_requires=install_requires,
     entry_points={
         'console_scripts': [
-            '10cord=src.10cord:main',
+            '10cord=src.main:main',
         ]
     },
     include_package_data=True,
