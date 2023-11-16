@@ -723,13 +723,17 @@ class MyClient():
             for channel in guild['channels']:
                 self.list_id[channel['local_id']] = channel['id']
         
-        print(self.args.channel)
-        while self.args.channel is None:
-            command = input('What should we do : ')
-            if command == ':cr' or ':attach' in command:
-                print('Please, select a channel first')
-            else:
-                self.internal_command(command)
+        if not self.args.channel: 
+            while self.args.channel is None:
+                command = input('What should we do : ')
+                if command == ':cr' or ':attach' in command:
+                    print('Please, select a channel first')
+                else:
+                    self.internal_command(command)
+        else:
+            self.main_loop_thread = threading.Thread(target=self.main_loop)
+            self.main_loop_thread.start()
+            self.refresh_screen()
 
         commands_list = [':q', ':help', ':cr', ':li', ':fr', ':we']
 
