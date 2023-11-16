@@ -722,8 +722,8 @@ class MyClient():
         for guild in self.guilds:
             for channel in guild['channels']:
                 self.list_id[channel['local_id']] = channel['id']
-        
-        if not self.args.channel: 
+
+        if not self.args.channel:
             while self.args.channel is None:
                 command = input('What should we do : ')
                 if command == ':cr' or ':attach' in command:
@@ -754,6 +754,8 @@ class MyClient():
 
 
 def main():
+    """ This main function is used to make an entry point for the program."""
+
     client = MyClient()
     client.main()
 
