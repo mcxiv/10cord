@@ -161,8 +161,10 @@ class MyClient():
                     self.ids[user_id] = self.get_username_from_id(user_id)
                 username_in_content = self.ids[user_id]
                 content = content.replace(
-                    f'<@{user_id}>', f'[bold]@{username_in_content}[/bold]')
-
+                    f'<@{user_id}>', f'[bold][dark_orange]@{username_in_content}[/dark_orange][/bold]')
+            if '@everyone' in content:
+                content = content.replace(
+                    '@everyone', '[bold][dark_orange]@everyone[/dark_orange][/bold]')
             if message['attachments'] != []:
                 content += (
                     f'[bold][red]{message["attachments"][0]["url"]}[/red][/bold]'
@@ -720,7 +722,8 @@ class MyClient():
         for guild in self.guilds:
             for channel in guild['channels']:
                 self.list_id[channel['local_id']] = channel['id']
-
+        
+        print(self.args.channel)
         while self.args.channel is None:
             command = input('What should we do : ')
             if command == ':cr' or ':attach' in command:
