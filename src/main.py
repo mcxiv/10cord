@@ -46,8 +46,13 @@ def parse_args():
     )
     parser.add_argument(
         '-a', '--attach',
-        help='If true, displays attachments (Requires chafa)',
-        default=False
+        help='Displays attachments (Requires chafa)',
+        action='store_true'
+    )
+    parser.add_argument(
+        '-t', '--token',
+        help='Custom user token',
+        default=None
     )
 
     return parser.parse_args()
@@ -61,24 +66,48 @@ class MyClient():
         if not os.path.exists('tmp'):
             os.mkdir('tmp')
 
-        if os.path.exists('tmp/token.json'):
-            with open('tmp/token.json', 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                self.user_id = data['user_id']
-                self.token = data['token']
-                self.timestamp = data['timestamp']
-            if float(self.timestamp) + 3600 < time.time():
+        if not self.args.token:
+            if os.path.exists('tmp/token.json'):
+                with open('tmp/token.json', 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self.user_id = data['user_id']
+                    self.token = data['token']
+                    self.timestamp = data['timestamp']
+                if float(self.timestamp) + 3600 < time.time():
+                    self.login()
+            else:
                 self.login()
-        else:
-            self.login()
 
         self.headers = {
             'User-Agent': fake_useragent.UserAgent().random,
-            'Authorization': self.token,
+            'Authorization': self.args.token if self.args.token else self.token
         }
+
+        if self.args.token:
+            self.user_id = self.get_my_id()
 
         self.ids = {}
         self.attachments = []
+
+    def get_my_id(self):
+        """
+        The function `get_my_id` retrieves the user ID associated with the token from the
+        Discord API.
+
+        :return: the user ID associated with the token.
+        """
+
+        response = requests.get(
+            f'{self.url}/users/@me',
+            headers=self.headers,
+            timeout=5
+        )
+
+        if response.status_code != 200:
+            raise Exception(
+                f'Get my ID failed : {response.status_code} {response.text}')
+
+        return response.json()['id']
 
     def login(self):
         """
