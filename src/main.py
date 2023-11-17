@@ -141,6 +141,62 @@ class MyClient():
 
         return messages
 
+    def manage_mentions(self, content):
+        """
+        The function `manage_mentions` replaces user mentions and the
+        `@everyone` mention in a given content with formatted text.
+
+        :param content: The `content` parameter is a string that
+        represents the content of a message
+        :return: the modified content after managing mentions.
+        """
+
+        if '<@' in content and '<@&' not in content:
+            # TODO: rework this part to avoid request as mentions is located
+            # in the message requests
+            user_id = content.split('<@')[1].split('>')[0]
+            if user_id not in self.ids:
+                self.ids[user_id] = self.get_username_from_id(user_id)
+            username_in_content = self.ids[user_id]
+            content = content.replace(
+                f'<@{user_id}>', f'[bold][dark_orange]@{username_in_content}[/dark_orange][/bold]')
+        if '@everyone' in content:
+            content = content.replace(
+                '@everyone', '[bold][dark_orange]@everyone[/dark_orange][/bold]')
+
+        return content
+
+    def manage_attachments(self, content, message):
+        """ Manage attachments in a message (Download, display, etc.)
+
+        :param content: The `content` parameter is a string that
+        represents the content of a message
+        :param message: The `message` parameter is a dict that
+        represents the message object
+        :return: the modified content after managing attachments.
+        """
+
+        if message['attachments'] != []:
+            content += (
+                f'[bold][red]{message["attachments"][0]["url"]}[/red][/bold]'
+            ) if content == '' else (
+                f'\n[bold][red]{message["attachments"][0]["url"]}[/red][/bold]'
+            )
+
+            if message['attachments'][0]['url'] not in self.attachments:
+                if self.args.attach:
+                    file = requests.get(
+                        message['attachments'][0]['url'], headers=self.headers
+                    )
+                    if file.status_code == 200:
+                        with open(f'./tmp/{message["attachments"][0]["filename"]}', 'wb') as f:
+                            f.write(file.content)
+                        self.attachments.append(
+                            message['attachments'][0]['url']
+                        )
+
+        return content
+
     def print_messages(self, messages):
         """
         The function "print_messages" takes in a list of messages and prints them.
@@ -153,36 +209,17 @@ class MyClient():
             date = message['timestamp'].replace('T', ' - ').split('.')[0]
             username = message['author']['username']
             content = message['content']
-            if '<@' in content and '<@&' not in content:
-                # TODO: rework this part to avoid request as mentions is located
-                # in the message requests
-                user_id = content.split('<@')[1].split('>')[0]
-                if user_id not in self.ids:
-                    self.ids[user_id] = self.get_username_from_id(user_id)
-                username_in_content = self.ids[user_id]
-                content = content.replace(
-                    f'<@{user_id}>', f'[bold][dark_orange]@{username_in_content}[/dark_orange][/bold]')
-            if '@everyone' in content:
-                content = content.replace(
-                    '@everyone', '[bold][dark_orange]@everyone[/dark_orange][/bold]')
-            if message['attachments'] != []:
-                content += (
-                    f'[bold][red]{message["attachments"][0]["url"]}[/red][/bold]'
-                ) if content == '' else (
-                    f'\n[bold][red]{message["attachments"][0]["url"]}[/red][/bold]'
-                )
+            content = self.manage_mentions(content)
+            content = self.manage_attachments(content, message)
 
-                if message['attachments'][0]['url'] not in self.attachments:
-                    if self.args.attach:
-                        file = requests.get(
-                            message['attachments'][0]['url'], headers=self.headers
-                        )
-                        if file.status_code == 200:
-                            with open(f'./tmp/{message["attachments"][0]["filename"]}', 'wb') as f:
-                                f.write(file.content)
-                            self.attachments.append(
-                                message['attachments'][0]['url']
-                            )
+            try:
+                referenced_message = message['referenced_message']['content']
+                referenced_message = self.manage_mentions(referenced_message)
+                referenced_message = self.manage_attachments(
+                    referenced_message, message['referenced_message'])
+                content += f'\n> [italic]{referenced_message}[/italic]'
+            except KeyError:
+                referenced_message = None
 
             rprint(
                 f'[bold][blue][{date}][/blue] [magenta]{username}[/magenta][/bold] : {content}')
