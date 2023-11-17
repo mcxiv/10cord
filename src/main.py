@@ -143,8 +143,9 @@ class MyClient():
 
     def manage_mentions(self, content):
         """
-        The function `manage_mentions` replaces user mentions and the
-        `@everyone` mention in a given content with formatted text.
+        The function `manage_mentions` replaces user mentions, the
+        `@everyone` mention, and the `@here` mention in a given
+        content with formatted text.
 
         :param content: The `content` parameter is a string that
         represents the content of a message
@@ -163,6 +164,9 @@ class MyClient():
         if '@everyone' in content:
             content = content.replace(
                 '@everyone', '[bold][dark_orange]@everyone[/dark_orange][/bold]')
+        if '@here' in content:
+            content = content.replace(
+                '@here', '[bold][dark_orange]@here[/dark_orange][/bold]')
 
         return content
 
