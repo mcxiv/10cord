@@ -197,6 +197,27 @@ class MyClient():
 
         return content
 
+    def manage_referenced_message(self, content, message):
+        """ Manage referenced message in a message
+
+        :param content: The `content` parameter is a string that
+        represents the content of a message
+        :param message: The `message` parameter is a dict that
+        represents the message object
+        :return: the modified content after managing referenced message.
+        """
+
+        try:
+            referenced_message = message['referenced_message']['content']
+            referenced_message = self.manage_mentions(referenced_message)
+            referenced_message = self.manage_attachments(
+                referenced_message, message['referenced_message'])
+            content += f'\n> [italic]{referenced_message}[/italic]'
+        except KeyError:
+            referenced_message = None
+
+        return content
+
     def print_messages(self, messages):
         """
         The function "print_messages" takes in a list of messages and prints them.
@@ -211,15 +232,7 @@ class MyClient():
             content = message['content']
             content = self.manage_mentions(content)
             content = self.manage_attachments(content, message)
-
-            try:
-                referenced_message = message['referenced_message']['content']
-                referenced_message = self.manage_mentions(referenced_message)
-                referenced_message = self.manage_attachments(
-                    referenced_message, message['referenced_message'])
-                content += f'\n> [italic]{referenced_message}[/italic]'
-            except KeyError:
-                referenced_message = None
+            content = self.manage_referenced_message(content, message)
 
             rprint(
                 f'[bold][blue][{date}][/blue] [magenta]{username}[/magenta][/bold] : {content}')
