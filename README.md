@@ -31,7 +31,7 @@ sudo apt install chafa
 ```
 10cord -h
 
-usage: 10cord.py [-h] [-c CHANNEL] [-a ATTACH] email password
+usage: main.py [-h] [-c CHANNEL] [-a] [-t TOKEN] email password
 
 positional arguments:
   email                 User email
@@ -41,11 +41,18 @@ options:
   -h, --help            show this help message and exit
   -c CHANNEL, --channel CHANNEL
                         Channel ID to get messages from
-  -a ATTACH, --attach ATTACH
-                        If true, displays attachments (Requires chafa)
+  -a, --attach          Displays attachments (Requires chafa)
+  -t TOKEN, --token TOKEN
+                        Custom user token
 
 10cord $EMAIL $PASSWORD
 ```
+
+### Authentication using custom token
+If you want to use a custom token, you can use the `-t` option, along with your token.
+Just pass any strings as `email` and `password`, and it will work. 
+
+*Original request from [this issue](https://github.com/mcxiv/10cord/issues/4), thanks to [daemon-git](https://github.com/daemon-git).*
 
 ### Selecting a channel
 When you launch 10cord, and type `:li` or `:fr`, a list of all your guilds and channels or friends will be displayed. You can select a channel by typing its ID and pressing enter.
