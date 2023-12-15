@@ -145,7 +145,7 @@ class MyClient():
     def get_messages(self):
         """
         The function `get_messages` retrieves the latest 100 messages from a specified
-        channel using the Discord server.
+        channel using the Discord API.
 
         :return: a list of messages.
         """
@@ -287,12 +287,7 @@ class MyClient():
         :return: a list of messages that are present in `messages1` but not in `messages2`.
         """
 
-        new_messages = []
-        for message in messages1:
-            if message not in messages2:
-                new_messages.append(message)
-
-        return new_messages
+        return [message for message in messages1 if message not in messages2]
 
     def send_message(self, content, attachments=[]):
         """
